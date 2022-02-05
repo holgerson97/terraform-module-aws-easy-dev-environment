@@ -1,0 +1,13 @@
+# Global config
+*                    @e113de/ops
+
+# Terraform Owner
+* .tf                @
+‚
+# Terratest Owner
+terratests/           @
+
+# Workflow Owner
+.github/workflows/   @
+.gitlab-ci.yml       @
+azure-pipelines.yml  @

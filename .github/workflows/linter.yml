@@ -1,0 +1,27 @@
+name: "Super-Linter"
+
+on:
+  push:
+    branches:
+      - main
+      - stage
+  pull_request:
+    branches:
+      - main
+      - stage
+
+jobs:
+
+  super_linter:
+    name: Run Super Linter against Code Base
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Lint Code Base
+      uses: github/super-linter@v4
+      env:
+        VALIDATE_GO: true
+        VALIDATE_TERRAFORM: true
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

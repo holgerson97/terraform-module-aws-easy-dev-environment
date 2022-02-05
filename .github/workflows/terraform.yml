@@ -1,0 +1,116 @@
+name: "Terraform"
+
+on:
+  push:
+    branches:
+      - main
+      - stage
+  pull_request:
+    branches:
+      - main
+      - stage
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  TF_VAR_ARM_CLIENT_ID: ${{ secrets.TF_VAR_ARM_CLIENT_ID }}
+  TF_VAR_ARM_CLIENT_SECRET: ${{ secrets.TF_VAR_ARM_CLIENT_SECRET }}
+  TF_VAR_ARM_SUBSCRIPTION_ID: ${{ secrets.TF_VAR_ARM_SUBSCRIPTION_ID }}
+  TF_VAR_ARM_TENANT_ID: ${{ secrets.TF_VAR_ARM_TENANT_ID }}
+
+jobs:
+     
+  terraform_format_validate:
+
+    name: Format and validate Terraform Code Base
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        terraform_version: [ 1.0 ]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: ${{ matrix.terraform_version }}
+     
+      - name: Terraform init
+        id: terraInit
+        run: terraform init
+
+      - name: Terraform format
+        id: terraFormat
+        run: terraform fmt -recursive -no-color -check
+
+  golang_format_vet:
+
+    name: Format and vet Golang Code Base
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./terratests
+
+    strategy:
+      matrix:
+        go_version: [ 1.16.5 ]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go_version }}
+
+      - name: Go format
+        id: goFormat
+        run: go fmt .
+      
+      - name: Go vet
+        id: goVet
+        run: go vet .
+
+  terratests:
+
+    name: Run Terratests against Terraform Code Base
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./terratests
+
+    strategy:
+      matrix:
+        terraform_version: [ 1.0 ]
+        go_version: [ 1.16.5 ]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: ${{ matrix.terraform_version }}
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go_version }}
+      - uses: azure/login@v1
+          with:
+            creds: '{"clientId":"${{ secrets.TF_VAR_ARM_CLIENT_ID }}","clientSecret":"${{ secrets.TF_VAR_ARM_CLIENT_SECRET }}","subscriptionId":"${{ secrets.TF_VAR_ARM_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.TF_VAR_ARM_TENANT_ID }}"}'
+            enable-AzPSSession: false
+
+      - name: Run Terratests
+        id: runTerratests
+        run: go test -v -timeout 60m
+        working-directory: ./terratests
+
+    createPR:
+      
+      name: Create a pull request to main branch
+      needs: [terraform_format_validate, golang_format_vet, terratests]
+      uses: peter-evans/create-pull-request@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        committer: GitHub <noreply@github.com>
+        author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+        signoff: false
