@@ -1,5 +1,5 @@
 # Global config
-*                    @e113de/ops
+*                    @holgerson97
 
 # Terraform Owner
 * .tf                @
@@ -10,4 +10,4 @@ terratests/           @
 # Workflow Owner
 .github/workflows/   @
 .gitlab-ci.yml       @
-azure-pipelines.yml  @
+azure-pipelines.yml  @‚
